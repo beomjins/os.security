@@ -1,0 +1,147 @@
+---
+- name: Change SSH port to match ansible_port
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Port '
+    line: "Port {{ target_ssh_port | default(22) }}"
+    state: present
+    backup: yes
+  when: target_ssh_port | int != 22
+  tags:
+    - ssh
+
+- name: Restart SSH service (ssh-clean)
+  service:
+    name: sshd
+    state: restarted
+  become: true
+  when: target_ssh_port | int != 22
+  tags:
+    - ssh
+
+- name: Update defaults.remote_port in ansible.cfg
+  lineinfile:
+    path: "{{ ansible_config_file }}"
+    regexp: '^#?remote_port='
+    line: "remote_port={{ target_ssh_port | default(22) }}"
+  delegate_to: localhost
+  run_once: true
+  when: target_ssh_port | int != 22
+  tags:
+    - ssh
+
+- name: Deploy system-wide SSH client config via template
+  template:
+    src: ssh_client_port.conf.j2
+    dest: /etc/ssh/ssh_config.d/99-ssh-client-config.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when: target_ssh_port | int != 22
+  tags:
+    - ssh
+
+- name: Deploy pwquality.conf from template
+  template:
+    src: pwquality.conf.j2
+    dest: /etc/security/pwquality.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Show current authselect profile
+  command: authselect current
+  register: current_profile
+  ignore_errors: yes
+
+- name: Select sssd profile
+  command: authselect select sssd --force
+
+- name: Enable faillock feature
+  command: authselect enable-feature with-faillock
+
+- name: Apply authselect changes
+  command: authselect apply-changes
+
+- name: Check authselect profile
+  command: authselect check
+  register: check_status
+
+- name: Show final authselect profile
+  command: authselect current
+  register: final_profile
+
+- name: Enable faillock.conf from template
+  template:
+    src: faillock.conf.j2
+    dest: /etc/security/faillock.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set PASS_MIN_LEN is login.defs
+  lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MIN_LEN'
+    line: "PASS_MIN_LEN {{ pass_min_len }}"
+
+- name: Set PASS_MAX_DAYS in login.defs
+  lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MAX_DAYS'
+    line: "PASS_MAX_DAYS {{ pass_max_days }}"
+    backup: yes
+
+- name: Set PASS_MIN_DAYS in login.defs
+  lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MIN_DAYS'
+    line: "PASS_MIN_DAYS {{ pass_min_days }}"
+    backup: yes
+
+- name: Set max password age for users
+  user:
+    name: "{{ item }}"
+    password_expire_max: "{{ password_max_days }}"
+  loop: "{{ ansible_users }}"
+  when: not (password_exception_enabled and item in password_exceptions)
+
+- name: Remove SUID bit from newgrp
+  file:
+    path: /usr/bin/newgrp
+    mode: u-s
+    state: file
+
+- name: Remove SUID bit from unix_chkpwd
+  file:
+    path: /sbin/unix_chkpwd
+    mode: u-s
+    state: file
+
+- name: Ensure umask 0022 is set in user's .bashrc
+  lineinfile:
+    path: "/home/{{ item }}/.bashrc"
+    line: "umask 0022"
+    create: yes
+    state: present
+    owner: "{{ item }}"
+    group: "{{ item }}"
+  loop: "{{ ansible_users }}"
+
+- name: Deploy /etc/motd from template
+  template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set shell to /sbin/nologin for unnecessary accounts
+  user:
+    name: "{{ item }}"
+    shell: /sbin/nologin
+  loop:
+    - sync
+    - shutdown
+    - halt

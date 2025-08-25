@@ -1,0 +1,8 @@
+---
+- name: Deploy security hardening
+  hosts: all
+  become: yes
+  any_errors_fatal: true
+  roles:
+    - { role: runtime.security }
+...

@@ -1,0 +1,31 @@
+## Ansible user name
+ansible_users:
+  - Username
+
+## Set password complexity
+minlen: 9
+minclass: 1
+maxrepeat: 0
+maxclassrepeat: 0
+lcredit: -1
+ucredit: -1
+dcredit: -1
+ocredit: -1
+
+## Set account lock thresholds
+faillock_deny: 5
+faillock_unlock_time: 1800
+
+## Set logdefs 
+pass_min_len: 8
+pass_max_days: 90
+pass_min_days: 7
+pass_warn_age: 14
+
+## Password_exceptions config
+password_exceptions:
+  - root
+  - Username
+
+## If true, exclude; if false, include.
+password_exception_enabled: true
