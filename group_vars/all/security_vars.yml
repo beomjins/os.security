@@ -2,6 +2,9 @@
 ansible_users:
   - Username
 
+## Set ssh port
+target_ssh_port: 22
+
 ## Set password complexity
 minlen: 9
 minclass: 1
