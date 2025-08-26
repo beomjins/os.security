@@ -4,5 +4,5 @@
   become: yes
   any_errors_fatal: true
   roles:
-    - { role: runtime.security }
+    - { role: os.security }
 ...
