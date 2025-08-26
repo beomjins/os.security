@@ -67,9 +67,11 @@ This role configures the following security policies:
   roles:
     - { role: os.security }
 
+## Example ansible-playbook
+$ ansible-playbook -i {{ inventory }} -e {{ group_vars/all/security_vars }} security.yml
+
 ## License
 - Code released under [Apache License 2.0](LICENSE)
-- Documentation released under [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 
 ------------------------------------------
 
