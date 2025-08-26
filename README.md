@@ -65,7 +65,7 @@ This role configures the following security policies:
 - hosts: all
   become: yes
   roles:
-    - { role: runtime.security }
+    - { role: os.security }
 
 ## License
 - Code released under [Apache License 2.0](LICENSE)
